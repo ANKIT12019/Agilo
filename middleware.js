@@ -1,5 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { authMiddleware } from "@clerk/nextjs/server";
+
 
 const isProtectedRoute = createRouteMatcher([
   "/onboarding(.*)",
