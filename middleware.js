@@ -1,7 +1,7 @@
-import { authMiddleware } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+const { authMiddleware } = require("@clerk/nextjs/server");
+const { NextResponse } = require("next/server");
 
-export default authMiddleware({
+module.exports = authMiddleware({
   beforeAuth: (req) => {
     const url = req.nextUrl;
     const pathname = url.pathname;
@@ -31,9 +31,9 @@ export default authMiddleware({
   },
 });
 
-export const config = {
+module.exports.config = {
   matcher: [
-    "/((?!_next|.*\\..*).*)", // exclude static files
-    "/(api|trpc)(.*)",        // include API routes
+    "/((?!_next|.*\\..*).*)",
+    "/(api|trpc)(.*)",
   ],
 };
