@@ -1,38 +1,39 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
 import { authMiddleware } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
+export default authMiddleware({
+  beforeAuth: (req) => {
+    const url = req.nextUrl;
+    const pathname = url.pathname;
 
-const isProtectedRoute = createRouteMatcher([
-  "/onboarding(.*)",
-  "/organisation(.*)",
-  "/project(.*)",
-  "/issue(.*)",
-  "/sprint(.*)",
-]);
+    const isProtected = [
+      "/onboarding",
+      "/organisation",
+      "/project",
+      "/issue",
+      "/sprint",
+    ].some((prefix) => pathname.startsWith(prefix));
 
-export default clerkMiddleware((auth, req) => {
-  if (!auth().userId && isProtectedRoute(req)) {
-    return auth().redirectToSignIn();
-  }
+    if (!req.auth?.userId && isProtected) {
+      return NextResponse.redirect(new URL("/sign-in", req.url));
+    }
 
-  if (
-    auth().userId &&
-    !auth().orgId &&
-    req.nextUrl.pathname !== "/onboarding" &&
-    req.nextUrl.pathname !== "/"
-  ) {
-    return NextResponse.redirect(new URL("/onboarding", req.url));
-  }
+    if (
+      req.auth?.userId &&
+      !req.auth?.orgId &&
+      pathname !== "/onboarding" &&
+      pathname !== "/"
+    ) {
+      return NextResponse.redirect(new URL("/onboarding", req.url));
+    }
+
+    return NextResponse.next();
+  },
 });
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
-    "/(api|trpc)(.*)",
+    "/((?!_next|.*\\..*).*)", // exclude static files
+    "/(api|trpc)(.*)",        // include API routes
   ],
 };
-
-
