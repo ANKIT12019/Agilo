@@ -1,39 +1,42 @@
-const { authMiddleware } = require("@clerk/nextjs/server");
-const { NextResponse } = require("next/server");
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-module.exports = authMiddleware({
-  beforeAuth: (req) => {
-    const url = req.nextUrl;
-    const pathname = url.pathname;
+const isProtectedRoute = createRouteMatcher([
+  "/onboarding(.*)",
+  "/organisation(.*)",
+  "/project(.*)",
+  "/issue(.*)",
+  "/sprint(.*)",
+]);
 
-    const isProtected = [
-      "/onboarding",
-      "/organisation",
-      "/project",
-      "/issue",
-      "/sprint",
-    ].some((prefix) => pathname.startsWith(prefix));
+export default clerkMiddleware((auth, req) => {
+  try {
+    const pathname = req.nextUrl.pathname;
 
-    if (!req.auth?.userId && isProtected) {
-      return NextResponse.redirect(new URL("/sign-in", req.url));
+    if (!auth().userId && isProtectedRoute(pathname)) {
+      return auth().redirectToSignIn();
     }
 
     if (
-      req.auth?.userId &&
-      !req.auth?.orgId &&
+      auth().userId &&
+      !auth().orgId &&
       pathname !== "/onboarding" &&
       pathname !== "/"
     ) {
-      return NextResponse.redirect(new URL("/onboarding", req.url));
+      const onboardingUrl = new URL("/onboarding", req.url);
+      return NextResponse.redirect(onboardingUrl);
     }
 
     return NextResponse.next();
-  },
+  } catch (error) {
+    console.error("Middleware Error:", error); // This will show in Vercel logs
+    return NextResponse.next(); // Prevents crashing
+  }
 });
 
-module.exports.config = {
+export const config = {
   matcher: [
-    "/((?!_next|.*\\..*).*)",
+    "/((?!_next|[^?]\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).)",
     "/(api|trpc)(.*)",
   ],
 };
