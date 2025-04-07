@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
+
 const isProtectedRoute = createRouteMatcher([
   "/onboarding(.*)",
   "/organisation(.*)",
@@ -10,33 +11,27 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware((auth, req) => {
-  try {
-    const pathname = req.nextUrl.pathname;
+  if (!auth().userId && isProtectedRoute(req)) {
+    return auth().redirectToSignIn();
+  }
 
-    if (!auth().userId && isProtectedRoute(pathname)) {
-      return auth().redirectToSignIn();
-    }
-
-    if (
-      auth().userId &&
-      !auth().orgId &&
-      pathname !== "/onboarding" &&
-      pathname !== "/"
-    ) {
-      const onboardingUrl = new URL("/onboarding", req.url);
-      return NextResponse.redirect(onboardingUrl);
-    }
-
-    return NextResponse.next();
-  } catch (error) {
-    console.error("Middleware Error:", error); // This will show in Vercel logs
-    return NextResponse.next(); // Prevents crashing
+  if (
+    auth().userId &&
+    !auth().orgId &&
+    req.nextUrl.pathname !== "/onboarding" &&
+    req.nextUrl.pathname !== "/"
+  ) {
+    return NextResponse.redirect(new URL("/onboarding", req.url));
   }
 });
 
 export const config = {
   matcher: [
-    "/((?!_next|[^?]\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).)",
+    // Skip Next.js internals and all static files, unless found in search params
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Always run for API routes
     "/(api|trpc)(.*)",
   ],
 };
+
+
